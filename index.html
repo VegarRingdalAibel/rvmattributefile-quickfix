@@ -107,6 +107,8 @@
                     
                     tempText = tempText + `END  \r\n`;
                 }
+                await writeData(tempText, true);
+                logInfo("Done");
 
             } catch (err) {
                 
@@ -115,8 +117,7 @@
                 return;
             }
 
-            await writeData(tempText, true);
-            logInfo("Done");
+            
         });
     </script>
 </html>
