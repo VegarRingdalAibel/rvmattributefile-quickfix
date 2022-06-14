@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {};
+        </script>
+    </head>
+
+    <body class="flex flex-col">
+        <button id="btn" class="w-26 m-2 p-2 bg-indigo-500 hover:bg-indigo-400">
+            Generate Attribute file
+        </button>
+        <div id="success" class="text-green-500 m-auto"></div>
+        <div id="error" class="text-red-500 m-auto"></div>
+        <div class="m-auto">Paste from excel, need to be 1 column named "FULLNAME"</div>
+        <textarea id="text" class="border border-gray-500 w-[800px] h-[500px] m-auto"></textarea>
+    </body>
+    <script>
+        const logError = function (err) {
+            console.error(err);
+            const textElement = document.getElementById("error");
+            textElement.innerText = err;
+        };
+
+        const logInfo = function (info) {
+            console.error(info);
+            const textElement = document.getElementById("error");
+            textElement.innerText = info;
+        };
+
+        const btn = document.getElementById("btn");
+        btn.addEventListener("click", async function () {
+            if (typeof showSaveFilePicker !== "function") {
+                logError(
+                    "Your browser does not support filesystem Access Api, use newest Chrome/Edge"
+                );
+                return;
+            }
+            const fileSystemAccessOptions = {
+                types: [
+                    {
+                        description: "Txt files",
+                        accept: {
+                            "text/plain": [".txt"]
+                        }
+                    }
+                ]
+            };
+
+            const handle = await showSaveFilePicker(fileSystemAccessOptions);
+            const writable = await handle.createWritable();
+
+            const writeData = async function (data, done = false) {
+                try {
+                    await writable.write(data);
+                } catch (e) {
+                    logError("Attribute file error -> " + e);
+                }
+                if (done) {
+                    try {
+                        await writable.close();
+                    } catch (e) {
+                        logError("Attribute file error -> " + e);
+                    }
+                }
+            };
+
+            await writeData(`CADC_Attributes_File v1.0 , start: NEW , end: END , name_end: := , sep: &end&\r\n`);
+            await writeData(`NEW Header Information\r\n`);
+            await writeData(`    Source:= PDMS Data &end& Date:=fredag 2019 september &end& Time:= 02:30:10\r\n`);
+            await writeData(`    Project:= web-report &end& MDB:= /na &end& Element:= =9440/0\r\n`);
+            await writeData(`END\r\n`);
+
+            try {
+                const textElement = document.getElementById("text");
+                
+                const rows = textElement.value.split("\n");
+                
+                const headers = rows.shift().split("\t");
+                
+                const data = [];
+                
+                rows.forEach((row) => {
+                    const columns = row.split("\t");
+                    const tempData = {};
+                    headers.forEach((header, i) => {
+                        tempData[header] = columns[i];
+                    });
+                    data.push(tempData);
+                });
+
+                let tempText = "";
+
+                for (let i = 0; i < data.length; i++) { 
+                    const row = data[i];
+                    tempText = tempText + `NEW  ${row.FULLNAME}\r\n`;
+                    
+                    for (let y = 0; y < headers.length; y++) {
+                        const col = headers[y];
+                        tempText = tempText + `   ${col} := '${row[col] || ""}'\r\n`;
+                    }
+                    
+                    tempText = tempText + `END  \r\n`;
+                }
+
+            } catch (err) {
+                
+                status = "failed";
+                logError(err);
+                return;
+            }
+
+            await writeData(tempText, true);
+            logInfo("Done");
+        });
+    </script>
+</html>
